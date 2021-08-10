@@ -50,10 +50,14 @@ export async function install(platform, engine, version) {
 
   let toolchainPaths = (version === 'mswin') ? await setupMSWin() : await setupMingw(version)
 
-  common.setupPath([`${rubyPrefix}\\bin`, ...toolchainPaths])
-
   if (!inToolCache) {
     await downloadAndExtract(engine, version, url, base, rubyPrefix);
+  }
+
+  common.setupPath([`${rubyPrefix}\\bin`, ...toolchainPaths])
+
+  if (common.rubyIsUCRT(`${rubyPrefix}\\bin`)) {
+    await installUCRT()
   }
 
   return rubyPrefix
@@ -77,6 +81,12 @@ async function downloadAndExtract(engine, version, url, base, rubyPrefix) {
   if (common.shouldUseToolCache(engine, version)) {
     common.createToolCacheCompleteFile(rubyPrefix)
   }
+}
+
+async function installUCRT() {
+  await common.measure('Installing MSYS2 UCRT build tools', async () => {
+    cp.execSync(`pacman -S --noconfirm --noprogressbar --needed %MINGW_PACKAGE_PREFIX%-gcc`)
+  })
 }
 
 async function setupMingw(version) {

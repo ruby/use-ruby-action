@@ -4,6 +4,7 @@ const fs = require('fs')
 const util = require('util')
 const stream = require('stream')
 const crypto = require('crypto')
+const child_process = require('child_process')
 const core = require('@actions/core')
 const { performance } = require('perf_hooks')
 
@@ -155,6 +156,13 @@ export function win2nix(path) {
   return path.replace(/\\/g, '/').replace(/ /g, '\\ ')
 }
 
+// JRuby is installed after setupPath is called, so folder doesn't exist
+export function rubyIsUCRT(path) {
+  return !!(fs.existsSync(path) &&
+    fs.readdirSync(path, { withFileTypes: true }).find(dirent =>
+      dirent.isFile() && dirent.name.match(/^x64-ucrt-ruby\d{3}\.dll$/)))
+}
+
 export function setupPath(newPathEntries) {
   const envPath = windows ? 'Path' : 'PATH'
   const originalPath = process.env[envPath].split(path.delimiter)
@@ -174,13 +182,27 @@ export function setupPath(newPathEntries) {
   }
 
   // Then add new path entries using core.addPath()
-  let newPath
+  let newPath = newPathEntries
   if (windows) {
-    // add MSYS2 in path for all Rubies on Windows, as it provides a better bash shell and a native toolchain
-    const msys2 = ['C:\\msys64\\mingw64\\bin', 'C:\\msys64\\usr\\bin']
-    newPath = [...newPathEntries, ...msys2]
-  } else {
-    newPath = newPathEntries
+    try {
+      // Use RubyInstaller mechanisms to set various evenironment variables including the PATH to MSYS2 tools
+      // Same as "ridk enable" on the command line
+      const envbuf = child_process.execFileSync(`${newPathEntries[0]}\\ruby`, ['-rruby_installer/runtime', '-e', 'puts RubyInstaller::Runtime.msys2_installation.enable_msys_apps_per_cmd'])
+      const envvars = envbuf.toString().trim().split(/\r?\n/)
+
+      envvars.forEach( (envvar) => {
+        console.log(`SET ${envvar}`)
+        const parts = envvar.split("=", 2)
+        core.exportVariable(parts[0], parts[1])
+      })
+    } catch (ex) {
+      // main Ruby dll determines whether mingw or ucrt build
+      let build_sys = rubyIsUCRT(newPathEntries[0]) ? 'ucrt64' : 'mingw64'
+
+      // add MSYS2 in path for all Rubies on Windows, as it provides a better bash shell and a native toolchain
+      const msys2 = [`C:\\msys64\\${build_sys}\\bin`, 'C:\\msys64\\usr\\bin']
+      newPath = [...newPathEntries, ...msys2]
+    }
   }
   console.log(`Entries added to ${envPath} to use selected Ruby:`)
   for (const entry of newPath) {
