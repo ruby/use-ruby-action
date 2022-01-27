@@ -16,6 +16,7 @@ const inputDefaults = {
   'bundler-cache': 'true',
   'working-directory': '.',
   'cache-version': bundler.DEFAULT_CACHE_VERSION,
+  'post-ruby-install': null,
 }
 
 // entry point when this action is run on its own
@@ -79,6 +80,14 @@ export async function setupRuby(options = {}) {
   }
 
   if (inputs['bundler'] !== 'none') {
+    // Similar to 'afterSetupPathHook' but for use within the Runner environment directly by end-user.
+    // If Bundler isn't being installed, this hook is redundant because the user is then free to execute
+    // their script in a separate `job.step`.
+    if (inputs['post-ruby-install']) {
+      await common.measure('Running Post Ruby Install Hook', async () =>
+        await exec.exec(inputs['post-ruby-install']))
+    }
+
     const [gemfile, lockFile] = bundler.detectGemfiles()
 
     const bundlerVersion = await common.measure('Installing Bundler', async () =>
