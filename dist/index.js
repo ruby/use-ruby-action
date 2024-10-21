@@ -223,7 +223,7 @@ async function bundleInstall(gemfile, lockFile, platform, engine, rubyVersion, b
   await exec.exec('bundle', ['install', '--jobs', '4'])
 
   // @actions/cache only allows to save for non-existing keys
-  if (!common.isExactKeyMatch(key, cachedKey)) {
+  if (!common.isExactCacheKeyMatch(key, cachedKey)) {
     if (cachedKey) { // existing cache but Gemfile.lock differs, clean old gems
       await exec.exec('bundle', ['clean'])
     }
@@ -316,7 +316,7 @@ __nccwpck_require__.r(__webpack_exports__);
 /* harmony export */   "createToolCacheCompleteFile": () => (/* binding */ createToolCacheCompleteFile),
 /* harmony export */   "win2nix": () => (/* binding */ win2nix),
 /* harmony export */   "setupPath": () => (/* binding */ setupPath),
-/* harmony export */   "isExactKeyMatch": () => (/* binding */ isExactKeyMatch)
+/* harmony export */   "isExactCacheKeyMatch": () => (/* binding */ isExactCacheKeyMatch)
 /* harmony export */ });
 const os = __nccwpck_require__(2037)
 const path = __nccwpck_require__(1017)
@@ -717,7 +717,7 @@ function setupPath(newPathEntries) {
 // Determines if two keys are an exact match for the purposes of cache matching
 // Specifically, this is a case-insensitive match that ignores accents
 // From actions/cache@v3 src/utils/actionUtils.ts (MIT)
-function isExactKeyMatch(key, cacheKey) {
+function isExactCacheKeyMatch(key, cacheKey) {
   return !!(
       cacheKey &&
       cacheKey.localeCompare(key, undefined, {

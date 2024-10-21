@@ -397,7 +397,7 @@ export function setupPath(newPathEntries) {
 // Determines if two keys are an exact match for the purposes of cache matching
 // Specifically, this is a case-insensitive match that ignores accents
 // From actions/cache@v3 src/utils/actionUtils.ts (MIT)
-export function isExactKeyMatch(key, cacheKey) {
+export function isExactCacheKeyMatch(key, cacheKey) {
   return !!(
       cacheKey &&
       cacheKey.localeCompare(key, undefined, {
